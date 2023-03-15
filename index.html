@@ -18,6 +18,7 @@
 
             <h1>Fast Encrypt and Decrypt</h1>
             <h2>CryptoJS</h2>
+
         </div>
 
         <form class="row">
@@ -25,6 +26,7 @@
                 <span class="input-group-text" id="inputMSG">Text Input</span>
                 <input type="text" class="form-control" aria-label="Sizing example input" name="inputMSG"
                     aria-describedby="inputMSG">
+                <button class="btn btn-primary paste" type="button">Paste</button>
             </div>
             <div class="input-group input-group-lg mt-2">
                 <span class="input-group-text" id="key">Key Input</span>
@@ -37,6 +39,11 @@
                     aria-describedby="outputTXT">
                 <button class="btn btn-primary copy" type="button">Copy</button>
             </div>
+            <div class="row d-flex mt-4">
+                <input type="checkbox" class="btn-check" id="custom-crypt">
+                <label class="btn btn-outline-info" for="custom-crypt">Custom Crypt</label>
+
+            </div>
             <div class="row  d-flex mt-4">
                 <div class="d-flex justify-content-evenly my-4">
                     <button type="button" id="encrypt" class="btn btn-primary btn-lg p-2 "><img src="lock.svg"
@@ -44,10 +51,11 @@
                         Encrypt</button>
                     <button type="button" id="decrypt" class="btn btn-success btn-lg p-2  "><img src="unlock.svg"
                             width="50px" alt="">Decrypt</button>
+
                 </div>
 
-
             </div>
+
         </form>
 
 
@@ -66,7 +74,13 @@
             try {
                 var inputText = document.querySelector("input[name='inputMSG']").value
                 var key = document.querySelector("input[name='key']").value
-                var encryptedtxt = CryptoJS.AES.encrypt(inputText, key).toString()
+                var encryptedtxt = null
+                if (document.querySelector("#custom-crypt").checked == true) {
+                    encryptedtxt = myEnc.encode(inputText, key)
+                }
+                else {
+                    encryptedtxt = CryptoJS.AES.encrypt(inputText, key).toString()
+                }
 
                 document.querySelector("input[name='outputTXT']").value = encryptedtxt.toString(CryptoJS.enc.Utf8);
                 createAlert("Encriptado com sucesso!", "success", 1000)
@@ -79,7 +93,14 @@
             try {
                 var inputText = document.querySelector("input[name='inputMSG']").value
                 var key = document.querySelector("input[name='key']").value
-                var decryptedtxt = CryptoJS.AES.decrypt(inputText, key)
+                var decryptedtxt = null
+                if (document.querySelector("#custom-crypt").checked == true) {
+                    decryptedtxt = myEnc.decode(inputText, key)
+                }
+                else {
+                    decryptedtxt = CryptoJS.AES.decrypt(inputText, key)
+                }
+
                 document.querySelector("input[name='outputTXT']").value = decryptedtxt.toString(CryptoJS.enc.Utf8);
                 createAlert("Descriptado com sucesso!", "success", 1000)
             } catch (e) {
@@ -108,9 +129,141 @@
             navigator.clipboard.writeText(txt);
             createAlert("Text Copied!", "primary")
         }
+        let pasteInput = async function () {
+            var txt = await navigator.clipboard.readText()
+            document.querySelector("input[name='inputMSG']").value = txt
+            createAlert("Text Pasted!", "primary")
+        }
         document.querySelector("button#encrypt").onclick = encrypt
         document.querySelector("button#decrypt").onclick = decrypt
         document.querySelector("button.copy").onclick = copyOutput
+        document.querySelector("button.paste").onclick = pasteInput
+
+    </script>
+    <script>
+        var myEnc = {
+
+            _keyStr: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/=",
+
+            encode: function (input, key) {
+                this._keyStr = key
+                var output = "";
+                var chr1, chr2, chr3, enc1, enc2, enc3, enc4;
+                var i = 0;
+
+                input = this._utf8_encode(input);
+
+                while (i < input.length) {
+
+                    chr1 = input.charCodeAt(i++);
+                    chr2 = input.charCodeAt(i++);
+                    chr3 = input.charCodeAt(i++);
+
+                    enc1 = chr1 >> 2;
+                    enc2 = ((chr1 & 3) << 4) | (chr2 >> 4);
+                    enc3 = ((chr2 & 15) << 2) | (chr3 >> 6);
+                    enc4 = chr3 & 63;
+
+                    if (isNaN(chr2)) {
+                        enc3 = enc4 = 64;
+                    } else if (isNaN(chr3)) {
+                        enc4 = 64;
+                    }
+
+                    output = output +
+                        this._keyStr.charAt(enc1) + this._keyStr.charAt(enc2) +
+                        this._keyStr.charAt(enc3) + this._keyStr.charAt(enc4);
+                }
+                return output;
+            },
+
+            decode: function (input, key) {
+                this._keyStr = key
+                var output = "";
+                var chr1, chr2, chr3;
+                var enc1, enc2, enc3, enc4;
+                var i = 0;
+
+                input = input.replace(/[^A-Za-z0-9\+\/\=]/g, "");
+
+                while (i < input.length) {
+
+                    enc1 = this._keyStr.indexOf(input.charAt(i++));
+                    enc2 = this._keyStr.indexOf(input.charAt(i++));
+                    enc3 = this._keyStr.indexOf(input.charAt(i++));
+                    enc4 = this._keyStr.indexOf(input.charAt(i++));
+
+                    chr1 = (enc1 << 2) | (enc2 >> 4);
+                    chr2 = ((enc2 & 15) << 4) | (enc3 >> 2);
+                    chr3 = ((enc3 & 3) << 6) | enc4;
+
+                    output = output + String.fromCharCode(chr1);
+
+                    if (enc3 != 64) {
+                        output = output + String.fromCharCode(chr2);
+                    }
+                    if (enc4 != 64) {
+                        output = output + String.fromCharCode(chr3);
+                    }
+                }
+
+                output = this._utf8_decode(output);
+
+                return output;
+            },
+
+            _utf8_encode: function (string) {
+                string = string.replace(/\r\n/g, "\n");
+                var utftext = "";
+
+                for (var n = 0; n < string.length; n++) {
+
+                    var c = string.charCodeAt(n);
+
+                    if (c < 128) {
+                        utftext += String.fromCharCode(c);
+                    }
+                    else if ((c > 127) && (c < 2048)) {
+                        utftext += String.fromCharCode((c >> 6) | 192);
+                        utftext += String.fromCharCode((c & 63) | 128);
+                    }
+                    else {
+                        utftext += String.fromCharCode((c >> 12) | 224);
+                        utftext += String.fromCharCode(((c >> 6) & 63) | 128);
+                        utftext += String.fromCharCode((c & 63) | 128);
+                    }
+                }
+                return utftext;
+            },
+
+            _utf8_decode: function (utftext) {
+                var string = "";
+                var i = 0;
+                var c = c1 = c2 = 0;
+
+                while (i < utftext.length) {
+
+                    c = utftext.charCodeAt(i);
+
+                    if (c < 128) {
+                        string += String.fromCharCode(c);
+                        i++;
+                    }
+                    else if ((c > 191) && (c < 224)) {
+                        c2 = utftext.charCodeAt(i + 1);
+                        string += String.fromCharCode(((c & 31) << 6) | (c2 & 63));
+                        i += 2;
+                    }
+                    else {
+                        c2 = utftext.charCodeAt(i + 1);
+                        c3 = utftext.charCodeAt(i + 2);
+                        string += String.fromCharCode(((c & 15) << 12) | ((c2 & 63) << 6) | (c3 & 63));
+                        i += 3;
+                    }
+                }
+                return string;
+            }
+        }
     </script>
     <style>
         body {
